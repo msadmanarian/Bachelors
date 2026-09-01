@@ -1,0 +1,41 @@
+{
+  "name": "Bachelors' Meal Manager",
+  "short_name": "MealManager",
+  "description": "Complete bachelor mess meal, bazar, deposit, and hisab management",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#10b981",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log Daily Meals",
+      "short_name": "Meals",
+      "description": "Quick daily meal entry",
+      "url": "/#meals_daily",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Add Bazar",
+      "short_name": "Bazar",
+      "description": "Add grocery expense",
+      "url": "/#expenses",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Hisab Statement",
+      "short_name": "Hisab",
+      "description": "View monthly calculation report",
+      "url": "/#reports",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    }
+  ]
+}
