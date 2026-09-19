@@ -1,4 +1,6 @@
 import {
+  DebtSettlementPlan,
+  DebtSettlementTransaction,
   Deposit,
   Expense,
   House,
@@ -214,6 +216,7 @@ export function calculateMonthlyHisab(params: CalculateHisabParams): MonthlyHisa
   });
 
   const cashInHand = roundCurrency(totalDeposits - totalGroupExpense);
+  const settlementPlan = computeMinimumCashFlowSettlement(membersSummary, monthKey, house.currency);
 
   return {
     houseId: house.id,
@@ -235,5 +238,102 @@ export function calculateMonthlyHisab(params: CalculateHisabParams): MonthlyHisa
     totalDeposits,
     cashInHand,
     membersSummary,
+    settlementPlan,
+  };
+}
+
+/**
+ * Computes an optimal, minimum-transaction cash flow settlement plan among mess members.
+ * Academic Algorithm: Minimum Cash Flow Problem (Greedy Bipartite Flow Reduction).
+ * Given N members with net balances B[i], finds the minimum number of directed payment
+ * transactions (at most N - 1) required to settle all debts and credits.
+ *
+ * Time Complexity: O(N log N) using sorted debtor/creditor lists.
+ * Space Complexity: O(N) auxiliary space.
+ *
+ * @param membersSummary List of member hisab summaries containing net balances
+ * @param monthKey The target accounting month
+ * @param currency Currency symbol (default '৳')
+ * @returns Structured settlement plan with ordered transactions
+ */
+export function computeMinimumCashFlowSettlement(
+  membersSummary: MemberHisabSummary[],
+  monthKey: string = '',
+  currency: string = '৳'
+): DebtSettlementPlan {
+  interface Participant {
+    id: string;
+    name: string;
+    amount: number; // strictly positive magnitude
+  }
+
+  const debtors: Participant[] = [];
+  const creditors: Participant[] = [];
+
+  for (const m of membersSummary) {
+    const bal = roundCurrency(m.netBalance);
+    if (bal < -0.01) {
+      debtors.push({
+        id: m.memberId,
+        name: m.memberName,
+        amount: roundCurrency(Math.abs(bal)),
+      });
+    } else if (bal > 0.01) {
+      creditors.push({
+        id: m.memberId,
+        name: m.memberName,
+        amount: roundCurrency(bal),
+      });
+    }
+  }
+
+  const transactions: DebtSettlementTransaction[] = [];
+  let totalSettled = 0;
+
+  // Greedy loop: iteratively settle between the largest remaining debtor and largest creditor
+  while (debtors.length > 0 && creditors.length > 0) {
+    // Sort descending by amount
+    debtors.sort((a, b) => b.amount - a.amount);
+    creditors.sort((a, b) => b.amount - a.amount);
+
+    const maxDebtor = debtors[0];
+    const maxCreditor = creditors[0];
+
+    const settledAmount = roundCurrency(Math.min(maxDebtor.amount, maxCreditor.amount));
+
+    if (settledAmount > 0.009) {
+      transactions.push({
+        fromMemberId: maxDebtor.id,
+        fromMemberName: maxDebtor.name,
+        toMemberId: maxCreditor.id,
+        toMemberName: maxCreditor.name,
+        amount: settledAmount,
+        formattedAmount: `${currency} ${settledAmount.toFixed(2)}`,
+      });
+      totalSettled = roundCurrency(totalSettled + settledAmount);
+    }
+
+    maxDebtor.amount = roundCurrency(maxDebtor.amount - settledAmount);
+    maxCreditor.amount = roundCurrency(maxCreditor.amount - settledAmount);
+
+    if (maxDebtor.amount <= 0.01) {
+      debtors.shift();
+    }
+    if (maxCreditor.amount <= 0.01) {
+      creditors.shift();
+    }
+  }
+
+  const remainingDebts = roundCurrency(debtors.reduce((sum, d) => sum + d.amount, 0));
+  const remainingCredits = roundCurrency(creditors.reduce((sum, c) => sum + c.amount, 0));
+  const unsettledResidual = roundCurrency(Math.abs(remainingCredits - remainingDebts));
+
+  return {
+    monthKey,
+    totalSettledAmount: totalSettled,
+    transactionsCount: transactions.length,
+    isFullySettled: transactions.length === 0 || (debtors.length === 0 && creditors.length === 0),
+    transactions,
+    unsettledResidual,
   };
 }

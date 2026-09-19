@@ -46,7 +46,12 @@ Based on the functional reference and UX workflows of **Bachelors' Meal Manager 
    - **Download CSV**: Spreadsheet dataset export.
    - **Copy for WhatsApp / Messenger**: Pre-formatted text with emojis and individual breakdowns ready to paste into group chats.
 
-8. **Visual Analytics**:
+8. **Algorithmic Debt Settlement & Cash Flow Minimization (CSC 3110)**:
+   - Solves the multi-party **Minimum Cash Flow Problem** using a greedy flow-reduction algorithm in $\mathcal{O}(N \log N)$ time.
+   - Reduces complex multi-party mess debts down to at most $N - 1$ direct payments (e.g. from potential 45 transfers down to 9).
+   - Dedicated settlement interface with debtor/creditor transfer cards and 1-click WhatsApp/Messenger copy.
+
+9. **Visual Analytics**:
    - Expense breakdown by category.
    - Member meal consumption share progress bars.
 

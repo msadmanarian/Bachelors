@@ -244,6 +244,17 @@ describe('Meal Calculation Engine', () => {
     // Invariant Check: Sum of net balances must equal cash in hand (0)
     const netSum = rahim.netBalance + karim.netBalance + sakib.netBalance;
     expect(netSum).toBe(0);
+
+    // Settlement Plan Integration Check:
+    expect(report.settlementPlan).toBeDefined();
+    expect(report.settlementPlan?.transactionsCount).toBe(2);
+    expect(report.settlementPlan?.totalSettledAmount).toBe(500);
+    expect(report.settlementPlan?.transactions[0].fromMemberName).toBe('Karim');
+    expect(report.settlementPlan?.transactions[0].toMemberName).toBe('Rahim');
+    expect(report.settlementPlan?.transactions[0].amount).toBe(400);
+    expect(report.settlementPlan?.transactions[1].fromMemberName).toBe('Karim');
+    expect(report.settlementPlan?.transactions[1].toMemberName).toBe('Sakib');
+    expect(report.settlementPlan?.transactions[1].amount).toBe(100);
   });
 
   it('supports fixed meal rate pricing mode', () => {

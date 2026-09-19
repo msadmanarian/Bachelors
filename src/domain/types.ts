@@ -163,6 +163,24 @@ export interface MemberHisabSummary {
   status: 'credit' | 'due' | 'settled';
 }
 
+export interface DebtSettlementTransaction {
+  fromMemberId: string;
+  fromMemberName: string;
+  toMemberId: string;
+  toMemberName: string;
+  amount: number;
+  formattedAmount: string;
+}
+
+export interface DebtSettlementPlan {
+  monthKey: string;
+  totalSettledAmount: number;
+  transactionsCount: number;
+  isFullySettled: boolean;
+  transactions: DebtSettlementTransaction[];
+  unsettledResidual: number;
+}
+
 export interface MonthlyHisabReport {
   houseId: string;
   monthKey: string;
@@ -183,6 +201,7 @@ export interface MonthlyHisabReport {
   totalDeposits: number;
   cashInHand: number; // totalDeposits - totalGroupExpense
   membersSummary: MemberHisabSummary[];
+  settlementPlan?: DebtSettlementPlan;
 }
 
 export interface BackupData {

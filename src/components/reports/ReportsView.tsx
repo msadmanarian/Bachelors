@@ -2,13 +2,16 @@ import confetti from 'canvas-confetti';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
+  ArrowRight,
   Calculator,
+  CheckCircle2,
   Download,
   FileSpreadsheet,
   FileText,
   Share2,
   TrendingUp,
   Table as TableIcon,
+  Zap,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
@@ -47,7 +50,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const { t, formatCurrency } = useI18n();
   const { showToast } = useToast();
 
-  const [activeSubTab, setActiveSubTab] = useState<'statement' | 'progressive'>('statement');
+  const [activeSubTab, setActiveSubTab] = useState<'statement' | 'progressive' | 'settlement'>('statement');
 
   // Compute days in month
   const [yearStr, monthStr] = hisabReport.monthKey.split('-');
@@ -403,6 +406,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         text += `• Net Balance: ${statusEmoji} *${sign}${formatCurrency(m.netBalance)} (${m.status.toUpperCase()})*\n`;
       });
 
+      if (hisabReport.settlementPlan && hisabReport.settlementPlan.transactions.length > 0) {
+        text += `\n━━━━━━━━━━━━━━━━━━━━━\n`;
+        text += `🤝 *OPTIMAL SETTLE-UP PLAN (MIN TRANSACTIONS):*\n`;
+        hisabReport.settlementPlan.transactions.forEach((tx, idx) => {
+          text += `${idx + 1}. *${tx.fromMemberName}* ➡️ pays *${tx.formattedAmount}* to *${tx.toMemberName}*\n`;
+        });
+      }
+
       text += `\n━━━━━━━━━━━━━━━━━━━━━\n`;
       text += `_Generated via Bachelors' Meal Manager_`;
 
@@ -411,6 +422,29 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       showToast(t('copied'));
     } catch (err) {
       showToast('Failed to copy to clipboard', 'error');
+    }
+  };
+
+  const handleCopySettlementPlan = () => {
+    try {
+      const plan = hisabReport.settlementPlan;
+      if (!plan || plan.transactions.length === 0) {
+        showToast('All accounts are fully settled!');
+        return;
+      }
+      let text = `🤝 *${house.name || "Bachelors' Meal Manager"} — Settle-Up Plan (${hisabReport.monthKey})*\n`;
+      text += `_Computed via Greedy Minimum Cash Flow Algorithm (${plan.transactionsCount} transactions)_\n\n`;
+      plan.transactions.forEach((tx, idx) => {
+        text += `${idx + 1}. *${tx.fromMemberName}* ➡️ pays *${tx.formattedAmount}* to *${tx.toMemberName}*\n`;
+      });
+      text += `\nTotal Settled: ${formatCurrency(plan.totalSettledAmount)}\n`;
+      text += `_Generated via Bachelors' Meal Manager_`;
+
+      navigator.clipboard.writeText(text);
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+      showToast('Settle-up plan copied to clipboard!');
+    } catch (err) {
+      showToast('Failed to copy settle-up plan', 'error');
     }
   };
 
@@ -471,9 +505,173 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           <TrendingUp size={16} />
           <span>Progressive Bazar & Meal Rate Timeline</span>
         </button>
+        <button
+          className={`btn ${activeSubTab === 'settlement' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveSubTab('settlement')}
+        >
+          <Calculator size={16} />
+          <span>Optimal Settle-Up Plan (Min Cash Flow)</span>
+        </button>
       </div>
 
-      {activeSubTab === 'progressive' ? (
+      {activeSubTab === 'settlement' ? (
+        /* Settle-Up Plan (Greedy Min Cash Flow Algorithm) */
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h4 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  🤝 Optimal Debt Settlement Plan
+                </h4>
+                <Badge variant="manager">CSC 3110: Greedy Flow Minimization</Badge>
+              </div>
+              <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Solves the multi-party Minimum Cash Flow problem in <code style={{ color: 'var(--primary)' }}>O(N log N)</code> time, reducing room transactions to at most <strong style={{ color: 'var(--text-primary)' }}>N - 1</strong> direct payments.
+              </p>
+            </div>
+
+            <button className="btn btn-accent" onClick={handleCopySettlementPlan}>
+              <Share2 size={16} />
+              <span>Copy Settle-Up Plan</span>
+            </button>
+          </div>
+
+          {/* KPI Metrics */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '12px',
+            }}
+          >
+            <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total Debt Settled</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)', marginTop: '2px' }}>
+                {formatCurrency(hisabReport.settlementPlan?.totalSettledAmount || 0)}
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Transactions Needed</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--accent)', marginTop: '2px' }}>
+                {hisabReport.settlementPlan?.transactionsCount || 0} transfers
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                Minimized from max {hisabReport.totalMembers > 1 ? (hisabReport.totalMembers * (hisabReport.totalMembers - 1)) / 2 : 0} pairwise debts
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '14px', background: 'var(--bg-surface)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Settlement Status</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: hisabReport.settlementPlan?.isFullySettled ? 'var(--primary)' : 'var(--warning)', marginTop: '4px' }}>
+                {hisabReport.settlementPlan?.isFullySettled ? '✓ Fully Solvable' : 'Partial / Discrepancy'}
+              </div>
+            </div>
+          </div>
+
+          {/* Transactions List */}
+          {!hisabReport.settlementPlan || hisabReport.settlementPlan.transactions.length === 0 ? (
+            <div style={{ padding: '36px', textAlign: 'center', background: 'var(--bg-surface)', borderRadius: '12px' }}>
+              <CheckCircle2 size={40} color="var(--primary)" style={{ margin: '0 auto 12px' }} />
+              <h5 style={{ fontSize: '1.1rem', fontWeight: 700 }}>All Accounts Are Fully Settled!</h5>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Every member has paid their exact consumption share. No inter-member transfers are required.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <h5 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Recommended Direct Transfers ({hisabReport.settlementPlan.transactionsCount})
+              </h5>
+
+              {hisabReport.settlementPlan.transactions.map((tx, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '14px 18px',
+                    borderRadius: '10px',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border)',
+                    gap: '12px',
+                  }}
+                >
+                  {/* Debtor */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '160px' }}>
+                    <div
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        color: 'var(--danger)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      {idx + 1}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{tx.fromMemberName}</div>
+                      <Badge variant="due">Owes (Debtor)</Badge>
+                    </div>
+                  </div>
+
+                  {/* Transfer Indicator */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px',
+                      flex: 1,
+                      minWidth: '140px',
+                    }}
+                  >
+                    <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--primary)' }}>
+                      {tx.formattedAmount}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                      <span>pays direct to</span>
+                      <ArrowRight size={14} />
+                    </div>
+                  </div>
+
+                  {/* Creditor */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '160px', justifyContent: 'flex-end' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{tx.toMemberName}</div>
+                      <Badge variant="credit">Receives (Creditor)</Badge>
+                    </div>
+                    <div
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: 'rgba(16, 185, 129, 0.15)',
+                        color: 'var(--primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      ✓
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : activeSubTab === 'progressive' ? (
         /* Progressive Bazar & Rate Calculation Explainer */
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
